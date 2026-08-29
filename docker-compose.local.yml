@@ -1,0 +1,13 @@
+# ---------------------------------------------------------------------------
+# Local-only overlay: publishes ports to the host.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+#
+# Do NOT deploy this overlay to Coolify — Coolify's proxy handles ingress, and
+# binding host ports there invites conflicts with other applications.
+# ---------------------------------------------------------------------------
+
+services:
+  app:
+    ports:
+      - "${APP_PORT:-3000}:3000"

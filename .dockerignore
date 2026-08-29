@@ -1,0 +1,38 @@
+# VCS / tooling
+.git
+.gitignore
+.github
+.vscode
+.idea
+.DS_Store
+
+# Dependencies & build output (rebuilt inside the image)
+node_modules
+.next
+dist
+out
+build
+
+# Local env — secrets must come from Coolify, never the image
+.env
+.env.*
+!.env.example
+
+# Docs & meta (irrelevant to the build, and busting the cache on every edit)
+README.md
+CONTRIBUTING.md
+LICENSE
+docs
+*.md
+!package.json
+
+# Test / coverage artifacts
+coverage
+.nyc_output
+*.log
+npm-debug.log*
+
+# Docker files themselves
+Dockerfile*
+docker-compose*.yml
+.dockerignore

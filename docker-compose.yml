@@ -1,0 +1,59 @@
+# ---------------------------------------------------------------------------
+# OpenSEO — application stack (bring your own database)
+#
+# This file runs ONLY the application containers. Postgres and Redis are
+# expected to be reachable at DATABASE_URL and REDIS_URL — a managed service,
+# a separate server, or another Coolify resource.
+#
+# Deploy this file as a "Docker Compose" resource in Coolify. No host ports are
+# published: Coolify's proxy reaches the app over the internal network and
+# terminates TLS for your domain.
+#
+# Don't have separate database servers? Add the bundled overlay to run Postgres
+# and Redis alongside the app:
+#   docker compose -f docker-compose.yml -f docker-compose.bundled.yml up -d
+# ---------------------------------------------------------------------------
+
+services:
+  app:
+    build:
+      context: .
+      target: runner
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    restart: unless-stopped
+    init: true
+    expose:
+      - "3000"
+    environment:
+      # Coolify replaces this magic variable with the domain configured for
+      # the service. Locally it falls back to the value from your .env.
+      SERVICE_FQDN_APP_3000: ${SERVICE_FQDN_APP_3000:-}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      QUEUE_NAME: ${QUEUE_NAME:-openseo-audits}
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+      NODE_ENV: production
+      PORT: "3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    build:
+      context: .
+      target: worker
+    restart: unless-stopped
+    init: true
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      QUEUE_NAME: ${QUEUE_NAME:-openseo-audits}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+      NODE_ENV: production

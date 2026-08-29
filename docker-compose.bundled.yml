@@ -1,0 +1,64 @@
+# ---------------------------------------------------------------------------
+# Optional overlay: run Postgres and Redis alongside the app.
+#
+# For self-hosters who do NOT have separate database servers:
+#   docker compose -f docker-compose.yml -f docker-compose.bundled.yml up -d
+#
+# When using this overlay, point the URLs at the service names:
+#   DATABASE_URL=postgres://openseo:<password>@postgres:5432/openseo
+#   REDIS_URL=redis://redis:6379
+#
+# If you already run Postgres/Redis elsewhere, ignore this file entirely.
+# ---------------------------------------------------------------------------
+
+services:
+  app:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-openseo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required when using the bundled overlay}
+      POSTGRES_DB: ${POSTGRES_DB:-openseo}
+    volumes:
+      # Postgres 18+ images expect the mount at /var/lib/postgresql, NOT at
+      # .../data — they store data in a version-specific subdirectory so that
+      # `pg_upgrade --link` can work across a single mount point. Mounting the
+      # old path makes the container refuse to start.
+      - openseo-postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openseo} -d ${POSTGRES_DB:-openseo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    volumes:
+      - openseo-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  openseo-postgres:
+  openseo-redis:
