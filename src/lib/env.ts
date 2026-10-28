@@ -23,15 +23,23 @@ function read(spec: EnvSpec): Record<string, string> {
     out[key] = value;
   }
 
+  for (const [key, fallback] of Object.entries(spec.optional ?? {})) {
+    out[key] = process.env[key]?.trim() || fallback;
+  }
+
+  // `next build` evaluates route modules to collect page data, but runtime
+  // secrets (DATABASE_URL, REDIS_URL) only exist in the running container —
+  // never in the image build. Skip the check there; it still runs, and still
+  // fails fast, the moment the real server or worker starts.
+  if (missing.length > 0 && process.env.NEXT_PHASE === 'phase-production-build') {
+    return out;
+  }
+
   if (missing.length > 0) {
     throw new Error(
       `Missing required environment variable(s): ${missing.join(', ')}. ` +
         `See .env.example for the full list.`,
     );
-  }
-
-  for (const [key, fallback] of Object.entries(spec.optional ?? {})) {
-    out[key] = process.env[key]?.trim() || fallback;
   }
 
   return out;

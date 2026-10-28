@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { audits, projects } from '@/db/schema';
 import { normaliseDomain } from '@/lib/url';
-import { auditQueue, removeProjectSchedule, syncProjectSchedule } from '@/lib/queue';
+import { getAuditQueue, removeProjectSchedule, syncProjectSchedule } from '@/lib/queue';
 
 export type FormState = { error?: string };
 
@@ -32,7 +32,7 @@ function readEmail(v: FormDataEntryValue | null): string | null {
 
 async function enqueueAudit(projectId: string, domain: string): Promise<string> {
   const [audit] = await db.insert(audits).values({ projectId, url: domain, trigger: 'manual' }).returning();
-  await auditQueue.add('audit', { projectId, auditId: audit.id });
+  await getAuditQueue().add('audit', { projectId, auditId: audit.id });
   return audit.id;
 }
 

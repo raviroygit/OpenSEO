@@ -24,9 +24,13 @@ export type AuditJob = {
  */
 const globalForQueue = globalThis as unknown as { __openseoQueue?: Queue<AuditJob> };
 
-export const auditQueue: Queue<AuditJob> =
-  globalForQueue.__openseoQueue ??
-  new Queue<AuditJob>(QUEUE_NAME, {
+/**
+ * Created on first use, not at import: `next build` evaluates route modules
+ * that import this file, and must not open a Redis connection while doing so.
+ * One instance per process (cached on globalThis across dev hot reloads).
+ */
+export function getAuditQueue(): Queue<AuditJob> {
+  globalForQueue.__openseoQueue ??= new Queue<AuditJob>(QUEUE_NAME, {
     connection: createRedisConnection(),
     defaultJobOptions: {
       // A crawl that failed half-way is retried once; repeated failures are
@@ -37,9 +41,7 @@ export const auditQueue: Queue<AuditJob> =
       removeOnFail: { age: 604_800 },
     },
   });
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForQueue.__openseoQueue = auditQueue;
+  return globalForQueue.__openseoQueue;
 }
 
 /** Spread scheduled crawls over 02:00–05:59 UTC so they don't all start at once. */
@@ -61,10 +63,10 @@ export async function syncProjectSchedule(project: {
 }): Promise<void> {
   const key = `project-${project.id}`;
   if (project.schedule === 'off') {
-    await auditQueue.removeJobScheduler(key);
+    await getAuditQueue().removeJobScheduler(key);
     return;
   }
-  await auditQueue.upsertJobScheduler(
+  await getAuditQueue().upsertJobScheduler(
     key,
     { pattern: cronFor(project.id, project.schedule), tz: 'UTC' },
     { name: 'scheduled-audit', data: { projectId: project.id } },
@@ -72,5 +74,5 @@ export async function syncProjectSchedule(project: {
 }
 
 export async function removeProjectSchedule(projectId: string): Promise<void> {
-  await auditQueue.removeJobScheduler(`project-${projectId}`);
+  await getAuditQueue().removeJobScheduler(`project-${projectId}`);
 }
