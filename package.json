@@ -27,22 +27,25 @@
     "migrate": "node dist/scripts/migrate.js"
   },
   "dependencies": {
-    "next": "16.3.3",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "drizzle-orm": "0.45.2",
-    "pg": "8.23.0",
     "bullmq": "6.3.2",
-    "ioredis": "6.0.0"
+    "cheerio": "1.2.0",
+    "drizzle-orm": "0.45.2",
+    "ioredis": "6.0.0",
+    "next": "16.3.3",
+    "nodemailer": "9.1.1",
+    "pg": "8.23.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
-    "tailwindcss": "4.3.3",
     "@types/node": "24.10.1",
+    "@types/nodemailer": "8.0.2",
     "@types/pg": "8.15.6",
     "@types/react": "19.2.8",
     "@types/react-dom": "19.2.5",
     "drizzle-kit": "0.31.10",
+    "tailwindcss": "4.3.3",
     "typescript": "7.0.2"
   }
 }

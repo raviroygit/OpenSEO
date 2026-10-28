@@ -35,6 +35,10 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
       QUEUE_NAME: ${QUEUE_NAME:-openseo-audits}
       DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+      # Optional login gate (src/proxy.ts) — an auth_request-style endpoint,
+      # e.g. Authelia's /api/authz/auth-request. Unset = no gate.
+      AUTH_REQUEST_URL: ${AUTH_REQUEST_URL:-}
+      AUTH_LOGIN_URL: ${AUTH_LOGIN_URL:-}
       NODE_ENV: production
       PORT: "3000"
     healthcheck:
@@ -56,4 +60,13 @@ services:
       QUEUE_NAME: ${QUEUE_NAME:-openseo-audits}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
       DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+      # Links in alert emails point here.
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      # Optional SMTP for score-drop / new-critical-issue alerts.
+      # Unset SMTP_HOST = alerts are logged instead of emailed.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
       NODE_ENV: production

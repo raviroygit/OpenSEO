@@ -34,6 +34,15 @@ Run your own instance in a few minutes — on Coolify, on a bare VPS, or on your
 
 ## What's in the box
 
+**Features**
+
+- **Projects** — one per website; track as many sites as you like side by side.
+- **Technical SEO audit** — a polite, bounded crawl (robots.txt-aware, seeded from the sitemap) that checks status codes, broken internal links, redirect chains, titles and meta descriptions (missing / length / duplicates), headings, canonicals, noindex, image alt text, mobile viewport, `lang`, HTTPS and response time.
+- **GEO / AI-search readiness** — `llms.txt`, AI crawlers blocked in robots.txt (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, …), structured data (JSON-LD, Organization/WebSite), thin content, and pages whose content only appears after JavaScript runs.
+- **Scores** — technical and GEO, 0–100, weighted by severity and by how many pages an issue touches.
+- **Scheduled re-audits + alerts** — daily or weekly per project; an email when a score drops 5+ points or a new critical issue appears.
+- **Optional login gate** — put the instance behind Authelia (or any `auth_request`-style server) with two env vars.
+
 Two application containers, both built from the same `Dockerfile`:
 
 | Service | Build target | Purpose |
@@ -238,6 +247,9 @@ Full reference; see [`.env.example`](./.env.example) for the annotated version.
 | `DATABASE_POOL_MAX` | — | `10` | app, worker | Postgres connections per process. |
 | `DATABASE_CONNECT_TIMEOUT_MS` | — | `5000` | app, worker | Connection attempt timeout, so an unreachable host fails fast. |
 | `PORT` | — | `3000` | app | |
+| `AUTH_REQUEST_URL` | — | — | app | Optional login gate: an `auth_request`-style endpoint, e.g. Authelia's `https://auth.example.com/api/authz/auth-request`. Unset = no gate. Fails closed if unreachable. |
+| `AUTH_LOGIN_URL` | — | — | app | Where signed-out visitors are sent, e.g. `https://auth.example.com/`. |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | — | — / `587` | worker | Optional SMTP for audit alerts. Unset `SMTP_HOST` = alerts are logged, not sent. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | — | `openseo` / — / `openseo` | bundled overlay only | Ignored unless you run `docker-compose.bundled.yml`. |
 
 Both services validate `DATABASE_URL` and `REDIS_URL` at boot and exit immediately with a named error if either is missing, rather than failing later with an opaque stack trace.
