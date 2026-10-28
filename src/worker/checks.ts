@@ -126,7 +126,10 @@ export function analyse(crawl: CrawlResult): {
       descriptions.set(p.metaDescription, [...(descriptions.get(p.metaDescription) ?? []), p.url]);
       if (p.metaDescription.length > 160) add({ code: 'meta-description-too-long', category: 'technical', severity: 'notice', pageUrl: p.url, message: `Meta description is ${p.metaDescription.length} characters; ~160 are shown.` });
     }
-    if (p.h1Count === 0) add({ code: 'h1-missing', category: 'technical', severity: 'warning', pageUrl: p.url, message: 'No <h1> heading.' });
+    // A client-rendered page whose h1 lives in its <noscript> fallback is
+    // reported once, as content-in-noscript-only below, not also here.
+    const jsRendered = p.wordCount < 50 && p.scriptCount >= 1;
+    if (p.h1Count === 0 && !(jsRendered && p.noscriptH1)) add({ code: 'h1-missing', category: 'technical', severity: 'warning', pageUrl: p.url, message: 'No <h1> heading.' });
     else if (p.h1Count > 1) add({ code: 'h1-multiple', category: 'technical', severity: 'notice', pageUrl: p.url, message: `${p.h1Count} <h1> headings; one is clearer.` });
 
     if (!p.canonical) {
@@ -155,7 +158,16 @@ export function analyse(crawl: CrawlResult): {
 
     // -------------------------------------------------------- per page (GEO)
     if (p.jsonLdInvalid > 0) add({ code: 'structured-data-invalid', category: 'geo', severity: 'warning', pageUrl: p.url, message: `${p.jsonLdInvalid} JSON-LD block(s) are not valid JSON.` });
-    if (p.wordCount < 50 && p.scriptCount >= 1) {
+    if (jsRendered && (p.noscriptH1 || p.noscriptWords >= 40)) {
+      add({
+        code: 'content-in-noscript-only',
+        category: 'geo',
+        severity: 'warning',
+        pageUrl: p.url,
+        message: `The visible page is rendered by JavaScript; crawlers that don't run it read only the <noscript> fallback (${p.noscriptWords} words). That works, but search engines give <noscript> text little weight — server-rendered HTML is stronger.`,
+        details: { noscriptWords: p.noscriptWords, renderedWords: p.wordCount },
+      });
+    } else if (jsRendered) {
       add({ code: 'content-requires-js', category: 'geo', severity: 'warning', pageUrl: p.url, message: `Only ${p.wordCount} word${p.wordCount === 1 ? ' is' : 's are'} in the HTML; the content is rendered by JavaScript, which most AI crawlers do not run.`, details: { wordCount: p.wordCount } });
     } else if (p.wordCount < 300) {
       add({ code: 'thin-content', category: 'geo', severity: 'notice', pageUrl: p.url, message: `Thin content: ${p.wordCount} words.`, details: { wordCount: p.wordCount } });

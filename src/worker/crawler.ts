@@ -43,6 +43,10 @@ export type PageFacts = {
   jsonLdTypes: string[];
   jsonLdInvalid: number;
   wordCount: number;
+  /** Words / h1s in <noscript> fallbacks — what no-JS crawlers can still read
+   *  on a client-rendered page (e.g. an Expo / SPA build that bakes copy in). */
+  noscriptWords: number;
+  noscriptH1: boolean;
   scriptCount: number;
   publishedTime: boolean;
   /** Same-site links found on the page (canonical keys). */
@@ -160,6 +164,8 @@ function extractFacts(outcome: FetchOutcome, requestedUrl: string, depth: number
     jsonLdTypes: [],
     jsonLdInvalid: 0,
     wordCount: 0,
+    noscriptWords: 0,
+    noscriptH1: false,
     scriptCount: 0,
     publishedTime: false,
     internalLinks: [],
@@ -204,11 +210,26 @@ function extractFacts(outcome: FetchOutcome, requestedUrl: string, depth: number
     }
   });
 
-  // Visible text only: what a crawler that doesn't run JavaScript sees.
+  // Visible text only: what a browser renders before any script runs.
   const $body = $('body').clone();
   $body.find('script, style, noscript, template, svg').remove();
   const text = $body.text().replace(/\s+/g, ' ').trim();
   base.wordCount = text ? text.split(' ').length : 0;
+
+  // <noscript> content is parsed as raw text (as a JS-capable browser does),
+  // so read it separately: client-rendered sites often put their real copy
+  // there for crawlers, and calling that page "0 words, no h1" misleads.
+  let fallback = '';
+  $('noscript').each((_, el) => {
+    fallback += ' ' + ($(el).html() ?? '');
+  });
+  if (fallback.trim()) {
+    const $f = cheerio.load(fallback);
+    $f('script, style').remove();
+    const ftext = $f.root().text().replace(/\s+/g, ' ').trim();
+    base.noscriptWords = ftext ? ftext.split(' ').length : 0;
+    base.noscriptH1 = $f('h1').length > 0;
+  }
 
   const pageUrl = new URL(outcome.finalUrl);
   const links = new Set<string>();
